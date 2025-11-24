@@ -1,0 +1,19 @@
+[project]
+name = 'Automated-Bitcoin-Portfolio-Management'
+description = ''
+authors = []
+telemetry = true
+cache_dir = './.cache'
+requirements = []
+[contracts.Automated-Bitcoin-Portfolio-Management]
+path = 'contracts/Automated-Bitcoin-Portfolio-Management.clar'
+clarity_version = 3
+epoch = 3.0
+[repl.analysis]
+passes = ['check_checker']
+
+[repl.analysis.check_checker]
+strict = false
+trusted_sender = false
+trusted_caller = false
+callee_filter = false
