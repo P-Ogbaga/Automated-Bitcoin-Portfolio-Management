@@ -143,3 +143,90 @@
       (merge portfolio { total-btc-value: (- (get total-btc-value portfolio) amount) }))
     
     (ok true)))
+
+;; Claim yield from yield-bearing assets
+(define-public (claim-yield (asset-id uint))
+  (let (
+    (asset-info (unwrap! (map-get? assets { asset-id: asset-id }) err-asset-not-exists))
+    (user-balance (unwrap! (map-get? user-asset-balances { user: tx-sender, asset-id: asset-id }) err-insufficient-balance))
+  )
+    (asserts! (get is-yield-bearing asset-info) (err u113))
+    (asserts! (is-some (get yield-source asset-info)) (err u114))
+    
+    
+    (let (
+      (blocks-since-last-claim (- stacks-block-height (get last-yield-claim-block asset-info)))
+      (yield-rate (get current-yield-percentage asset-info))
+      (yield-amount (/ (* (get amount user-balance) yield-rate blocks-since-last-claim) u10000))
+    )
+      ;; Update asset info with new claim block
+      (map-set assets
+        { asset-id: asset-id }
+        (merge asset-info { last-yield-claim-block: stacks-block-height }))
+      
+      ;; Update user balance with yield
+      (map-set user-asset-balances
+        { user: tx-sender, asset-id: asset-id }
+        { amount: (+ (get amount user-balance) yield-amount) })
+      
+      (ok yield-amount))))
+
+;; Get a user's portfolio composition
+(define-read-only (get-portfolio-composition (user principal))
+  (let (
+    (portfolio (map-get? user-portfolios { user: user }))
+  )
+    (if (is-some portfolio)
+      (ok (some portfolio))
+      (err err-invalid-risk-level))))
+
+;; Get current asset allocation for user
+(define-read-only (get-current-allocation (user principal))
+  (ok (map-get? user-portfolios { user: user })))
+
+;; Helper to set individual allocation
+(define-private (set-allocation (allocation {asset-id: uint, percentage: uint}))
+  (let (
+    (asset-id (get asset-id allocation))
+    (percentage (get percentage allocation))
+    (portfolio (unwrap-panic (map-get? user-portfolios { user: tx-sender })))
+    (risk-level (get risk-level portfolio))
+  )
+    (map-set risk-allocations
+      { risk-level: risk-level, asset-id: asset-id }
+      { target-percentage: percentage })
+    true))
+
+;; Calculate current portfolio drift compared to target allocation
+(define-private (calculate-portfolio-drift (user principal))
+  (let (
+    (portfolio (unwrap-panic (map-get? user-portfolios { user: user })))
+    (risk-level (get risk-level portfolio))
+
+  )
+    u10)) ;; 10% drift from targets
+
+;; Check if a portfolio is active
+(define-private (active-portfolio (user principal))
+  (let (
+    (portfolio (map-get? user-portfolios { user: user }))
+  )
+    (if (is-some portfolio)
+      (get active (unwrap-panic portfolio))
+      false)))
+
+;; Record portfolio performance for historical tracking
+(define-private (record-performance (user principal))
+  (let (
+    (portfolio (unwrap-panic (map-get? user-portfolios { user: user })))
+    (current-value (get total-btc-value portfolio))
+    ;; In a real implementation, you'd calculate actual performance metrics
+    (percentage-change 10) ;; Placeholder for 10% increase
+  )
+    (map-set portfolio-performance
+      { user: user, timestamp: stacks-block-height }
+      { 
+        btc-value: current-value,
+        percentage-change: percentage-change
+      })
+    (ok true)))
