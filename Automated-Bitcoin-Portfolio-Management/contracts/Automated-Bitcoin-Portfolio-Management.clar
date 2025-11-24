@@ -316,3 +316,47 @@
     
     (ok u10) ;; Placeholder return for 10% projected growth
   ))
+
+  ;; Get a simulation result
+(define-read-only (get-simulation-result (simulation-id uint))
+  ;; Placeholder for retrieving simulation results
+  (ok {
+    projected-growth: u10,
+    max-drawdown: u5,
+    sharpe-ratio: u200,
+    risk-level: risk-moderate
+  }))
+
+;; DCA configuration for users
+(define-map dca-configurations
+  { user: principal }
+  {
+    active: bool,
+    frequency-blocks: uint,
+    amount-per-period: uint,
+    target-asset-id: uint,
+    last-execution-block: uint,
+    source-asset-id: uint
+  }
+)
+
+;; Allow users to delegate portfolio management
+(define-map delegated-managers
+  { user: principal, manager: principal }
+  {
+    active: bool,
+    expiration-height: uint,
+    fee-percentage: uint,
+    can-withdraw: bool
+  }
+)
+
+;; Manager performance tracking
+(define-map manager-performance
+  { manager: principal }
+  {
+    total-users: uint,
+    average-return: int,
+    assets-under-management: uint
+  }
+)
