@@ -230,3 +230,89 @@
         percentage-change: percentage-change
       })
     (ok true)))
+
+;; Register a new asset that can be managed in portfolios
+(define-public (register-asset (asset-id uint) 
+                             (name (string-ascii 32)) 
+                             (token-contract principal)
+                             (token-id (optional uint))
+                             (is-yield-bearing bool)
+                             (yield-source (optional principal))
+                             (initial-yield-percentage uint))
+  (begin
+    (asserts! (is-eq tx-sender contract-owner) err-owner-only)
+    (asserts! (not (is-some (map-get? assets { asset-id: asset-id }))) err-asset-exists)
+    
+    (map-set assets
+      { asset-id: asset-id }
+      {
+        name: name,
+        token-contract: token-contract,
+        token-id: token-id,
+        is-yield-bearing: is-yield-bearing,
+        yield-source: yield-source,
+        current-yield-percentage: initial-yield-percentage,
+        last-yield-claim-block: stacks-block-height
+      })
+    
+    (ok true)))
+
+;; Update risk allocation for a specific asset
+(define-public (set-risk-allocation (risk-level uint) (asset-id uint) (percentage uint))
+  (begin
+    (asserts! (is-eq tx-sender contract-owner) err-owner-only)
+    (asserts! (or (is-eq risk-level risk-conservative) 
+                (is-eq risk-level risk-moderate) 
+                (is-eq risk-level risk-aggressive)) 
+            err-invalid-risk-level)
+    (asserts! (is-some (map-get? assets { asset-id: asset-id })) err-asset-not-exists)
+    (asserts! (and (>= percentage u0) (<= percentage u100)) err-invalid-threshold)
+    
+    (map-set risk-allocations
+      { risk-level: risk-level, asset-id: asset-id }
+      { target-percentage: percentage })
+    
+    (ok true)))
+;; Update the rebalance frequency (in blocks)
+(define-public (set-rebalance-frequency (blocks uint))
+  (begin
+    (asserts! (is-eq tx-sender contract-owner) err-owner-only)
+    (asserts! (> blocks u0) err-invalid-threshold)
+    (var-set rebalance-frequency blocks)
+    (ok true)))
+
+;; Update the minimum rebalance threshold
+(define-public (set-minimum-rebalance-threshold (percentage uint))
+  (begin
+    (asserts! (is-eq tx-sender contract-owner) err-owner-only)
+    (asserts! (and (> percentage u0) (< percentage u100)) err-invalid-threshold)
+    (var-set minimum-rebalance-threshold percentage)
+    (ok true)))
+
+;; Update maximum allowed slippage
+(define-public (set-max-slippage (percentage uint))
+  (begin
+    (asserts! (is-eq tx-sender contract-owner) err-owner-only)
+    (asserts! (and (>= percentage u0) (< percentage u50)) err-invalid-threshold)
+    (var-set max-slippage-percentage percentage)
+    (ok true)))
+
+;; Set the performance fee percentage
+(define-public (set-performance-fee (percentage uint))
+  (begin
+    (asserts! (is-eq tx-sender contract-owner) err-owner-only)
+    (asserts! (and (>= percentage u0) (< percentage u30)) err-invalid-threshold)
+    (var-set performance-fee-percentage percentage)
+    (ok true)))
+
+;; Run a simulation of different allocation strategies
+(define-public (simulate-strategy (risk-level uint) (scenario uint))
+  (begin
+    (asserts! (or (is-eq risk-level risk-conservative) 
+                (is-eq risk-level risk-moderate) 
+                (is-eq risk-level risk-aggressive)) 
+            err-invalid-risk-level)
+    
+    
+    (ok u10) ;; Placeholder return for 10% projected growth
+  ))
